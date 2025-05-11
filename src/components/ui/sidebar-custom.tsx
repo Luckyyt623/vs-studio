@@ -2,12 +2,12 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter as ShadSheetFooter } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader as ShadSheetHeaderImport, SheetTitle, SheetFooter as ShadSheetFooter } from "@/components/ui/sheet"; // SheetTitle is DialogPrimitive.Title
 import { Button } from "@/components/ui/button";
 import { PanelLeft } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-// Context for sidebar state
+// Context for sidebar state (legacy, not used by page.tsx directly for this custom sidebar)
 type SidebarContextType = {
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -62,7 +62,7 @@ export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
         ref={ref}
         className={cn(
           "hidden md:flex flex-col h-full w-[280px] bg-sidebar text-sidebar-foreground border-r border-sidebar-border",
-          !currentOpen && "hidden", // Simple hide/show for desktop controlled by parent
+          !currentOpen && "hidden",
           className
         )}
         {...props}
@@ -83,17 +83,40 @@ export const SidebarHeader = React.forwardRef<HTMLDivElement, React.HTMLAttribut
 );
 SidebarHeader.displayName = "SidebarHeader";
 
-// Sidebar Title (simplified from SheetTitle)
+// Sidebar Title
+// Uses SheetTitle (DialogPrimitive.Title) on mobile, and a simple <h2> on desktop.
 export const SidebarTitle = React.forwardRef<
-  React.ElementRef<typeof SheetTitle>,
-  React.ComponentPropsWithoutRef<typeof SheetTitle>
->(({ className, ...props }, ref) => (
-  <SheetTitle
-    ref={ref}
-    className={cn("text-lg font-semibold flex items-center text-sidebar-foreground", className)}
-    {...props}
-  />
-));
+  HTMLHeadingElement, // Ref will be to an h2 or the element SheetTitle renders as (h2 by default)
+  React.ComponentPropsWithoutRef<typeof SheetTitle> // Props compatible with SheetTitle (and thus h2)
+>(({ className, children, ...props }, ref) => {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    // On mobile, it's rendered within a Sheet context, so use SheetTitle from sheet.tsx
+    return (
+      <SheetTitle // This is from "@/components/ui/sheet", which is DialogPrimitive.Title
+        ref={ref}
+        className={cn("text-lg font-semibold flex items-center text-sidebar-foreground", className)}
+        {...props}
+      >
+        {children}
+      </SheetTitle>
+    );
+  }
+
+  // On desktop, render as a simple h2 tag.
+  // SheetTitle from sheet.tsx (DialogPrimitive.Title) also defaults to an h2.
+  // The props are compatible.
+  return (
+    <h2
+      ref={ref}
+      className={cn("text-lg font-semibold flex items-center text-sidebar-foreground", className)}
+      {...props}
+    >
+      {children}
+    </h2>
+  );
+});
 SidebarTitle.displayName = "SidebarTitle";
 
 
@@ -138,27 +161,18 @@ export const SidebarGroupContent = React.forwardRef<HTMLDivElement, React.HTMLAt
 SidebarGroupContent.displayName = "SidebarGroupContent";
 
 
-// Sidebar Trigger (for mobile, to be placed in main content area's header)
+// Sidebar Trigger
 interface SidebarTriggerProps extends React.ComponentPropsWithoutRef<typeof Button> { }
 
 export const SidebarTrigger = React.forwardRef<HTMLButtonElement, SidebarTriggerProps>(
   ({ className, onClick, ...props }, ref) => {
-    // const { setIsOpen } = useSidebar_legacy(); // If using context based provider
-    // For direct control via page.tsx state:
-    // This trigger might need to be connected to the state in page.tsx
-    // For now, it's a simple button. The page.tsx example uses its own button.
-    // This ShadCN SidebarTrigger is more for the complex SidebarProvider.
-    // For this simplified custom component, the trigger is effectively managed by the parent page.
-    
-    // Fallback to ShadCN's Button if used in a context that expects it.
-    // In CodeWriteMobilePage, a Button with PanelLeft is used.
     return (
        <Button
         ref={ref}
         variant="ghost"
         size="icon"
-        className={cn("md:hidden", className)} // Typically hidden on desktop
-        onClick={onClick} // onClick should control the 'open' state in the parent
+        className={cn("md:hidden", className)} 
+        onClick={onClick} 
         {...props}
       >
         <PanelLeft className="w-5 h-5" />

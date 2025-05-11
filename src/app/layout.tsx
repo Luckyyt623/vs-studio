@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
-import { GeistMono } from 'geist/font/mono';
+// import { GeistMono } from 'geist/font/mono'; // Removed as it might not be installed
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { SidebarProvider } from '@/components/ui/sidebar';
 
 const geistSans = GeistSans;
-const geistMono = GeistMono;
+// const geistMono = GeistMono; // Removed
 
 export const metadata: Metadata = {
   title: 'CodeWrite Mobile',
@@ -19,9 +19,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className={`dark ${geistSans.variable}`}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans`}
+        className="antialiased font-sans" // Removed geistMono.variable
       >
         <SidebarProvider>
           {children}
