@@ -1,11 +1,13 @@
+
 "use client";
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Sheet, SheetContent, SheetHeader as ShadSheetHeaderImport, SheetTitle, SheetFooter as ShadSheetFooter } from "@/components/ui/sheet"; // SheetTitle is DialogPrimitive.Title
+import { Sheet, SheetContent, SheetTitle as ShadSheetTitleComponent, SheetFooter as ShadSheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { PanelLeft } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+
 
 // Context for sidebar state (legacy, not used by page.tsx directly for this custom sidebar)
 type SidebarContextType = {
@@ -62,7 +64,7 @@ export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
         ref={ref}
         className={cn(
           "hidden md:flex flex-col h-full w-[280px] bg-sidebar text-sidebar-foreground border-r border-sidebar-border",
-          !currentOpen && "hidden",
+          !currentOpen && "hidden", // This handles desktop toggle if sidebarOpen state is managed
           className
         )}
         {...props}
@@ -75,38 +77,23 @@ export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
 Sidebar.displayName = "Sidebar";
 
 
-// Sidebar Header
+// Sidebar Header (Simplified for desktop, mobile handled by page.tsx with ShadSheetHeader)
 export const SidebarHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("p-4 border-b border-sidebar-border", className)} {...props} />
+  ({ className, children, ...props }, ref) => (
+    <div ref={ref} className={cn("p-4 border-b border-sidebar-border", className)} {...props}>
+      {children}
+    </div>
   )
 );
 SidebarHeader.displayName = "SidebarHeader";
 
-// Sidebar Title
-// Uses SheetTitle (DialogPrimitive.Title) on mobile, and a simple <h2> on desktop.
+// Sidebar Title (Simplified for desktop, mobile handled by page.tsx with ShadSheetTitle)
 export const SidebarTitle = React.forwardRef<
-  HTMLHeadingElement, // Ref will be to an h2 or the element SheetTitle renders as (h2 by default)
-  React.ComponentPropsWithoutRef<typeof SheetTitle> // Props compatible with SheetTitle (and thus h2)
+  HTMLHeadingElement,
+  React.HTMLAttributes<HTMLHeadingElement> // Simplified props
 >(({ className, children, ...props }, ref) => {
-  const isMobile = useIsMobile();
-
-  if (isMobile) {
-    // On mobile, it's rendered within a Sheet context, so use SheetTitle from sheet.tsx
-    return (
-      <SheetTitle // This is from "@/components/ui/sheet", which is DialogPrimitive.Title
-        ref={ref}
-        className={cn("text-lg font-semibold flex items-center text-sidebar-foreground", className)}
-        {...props}
-      >
-        {children}
-      </SheetTitle>
-    );
-  }
-
-  // On desktop, render as a simple h2 tag.
-  // SheetTitle from sheet.tsx (DialogPrimitive.Title) also defaults to an h2.
-  // The props are compatible.
+  // This component now primarily serves the desktop view as an h2.
+  // The mobile version (DialogPrimitive.Title) is handled directly in page.tsx.
   return (
     <h2
       ref={ref}
@@ -166,6 +153,9 @@ interface SidebarTriggerProps extends React.ComponentPropsWithoutRef<typeof Butt
 
 export const SidebarTrigger = React.forwardRef<HTMLButtonElement, SidebarTriggerProps>(
   ({ className, onClick, ...props }, ref) => {
+    // This trigger is for the custom sidebar system, ensure it correctly targets `sidebarOpen` state from page.tsx
+    // Or, if it's for the ui/sidebar.tsx system, ensure correct context.
+    // For now, assuming it's for the page.tsx's `sidebarOpen` state for the mobile Sheet.
     return (
        <Button
         ref={ref}

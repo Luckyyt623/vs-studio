@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -6,19 +7,21 @@ import { FileControls } from '@/components/app/file-controls';
 import { SettingsPanel } from '@/components/app/settings-panel';
 import {
   Sidebar,
-  SidebarContent,
-  SidebarHeader,
+  SidebarContent as CustomSidebarContent, // Renamed to avoid conflict
+  SidebarHeader as CustomSidebarHeader, // Renamed
   SidebarInset,
   SidebarTrigger,
-  SidebarTitle,
+  SidebarTitle as CustomSidebarTitle,   // Renamed
   SidebarGroup,
   SidebarGroupLabel,
   SidebarGroupContent,
-  SidebarFooter,
-} from '@/components/ui/sidebar-custom'; // Assuming a custom sidebar or similar
+  SidebarFooter as CustomSidebarFooter, // Renamed
+} from '@/components/ui/sidebar-custom';
+import { SheetHeader as ShadSheetHeader, SheetTitle as ShadSheetTitle } from '@/components/ui/sheet'; // Import ShadCN parts
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile
 import {
   DEFAULT_LANGUAGE,
   DEFAULT_FONT_SIZE,
@@ -37,23 +40,38 @@ export default function CodeWriteMobilePage() {
   const [indentation, setIndentation] = useLocalStorage<number>('codewrite-indentation', DEFAULT_INDENTATION);
   
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isMobileClient = useIsMobile(); // Use hook here
 
   const handleLoadFile = (content: string, name: string) => {
     setCode(content);
     setFileName(name);
   };
 
+  const sidebarTitleContent = (
+    <>
+      <TerminalSquare className="w-6 h-6 mr-2 text-accent" />
+      CodeWrite Mobile
+    </>
+  );
+
   return (
       <div className="flex h-screen bg-background">
         <Sidebar open={sidebarOpen} onOpenChange={setSidebarOpen} side="left">
-          <SidebarHeader>
-            <SidebarTitle>
-              <TerminalSquare className="w-6 h-6 mr-2 text-accent" />
-              CodeWrite Mobile
-            </SidebarTitle>
-          </SidebarHeader>
+          {isMobileClient ? (
+            <ShadSheetHeader className="p-4 border-b border-sidebar-border">
+              <ShadSheetTitle className="text-lg font-semibold flex items-center text-sidebar-foreground">
+                {sidebarTitleContent}
+              </ShadSheetTitle>
+            </ShadSheetHeader>
+          ) : (
+            <CustomSidebarHeader>
+              <CustomSidebarTitle>
+                {sidebarTitleContent}
+              </CustomSidebarTitle>
+            </CustomSidebarHeader>
+          )}
           <ScrollArea className="flex-grow">
-            <SidebarContent>
+            <CustomSidebarContent>
               <SidebarGroup>
                 <SidebarGroupLabel>File Management</SidebarGroupLabel>
                 <SidebarGroupContent>
@@ -80,11 +98,11 @@ export default function CodeWriteMobilePage() {
                   />
                 </SidebarGroupContent>
               </SidebarGroup>
-            </SidebarContent>
+            </CustomSidebarContent>
           </ScrollArea>
-          <SidebarFooter className="p-4 text-xs text-muted-foreground">
+          <CustomSidebarFooter className="p-4 text-xs text-muted-foreground">
             Powered by AI
-          </SidebarFooter>
+          </CustomSidebarFooter>
         </Sidebar>
 
         <SidebarInset className="flex flex-col flex-1 overflow-hidden">
@@ -93,11 +111,12 @@ export default function CodeWriteMobilePage() {
               <PanelLeft className="w-5 h-5" />
               <span className="sr-only">Open sidebar</span>
             </Button>
-             <div className="md:hidden text-sm font-medium truncate"> {/* Hidden on md+ because sidebar trigger moves */}
+             <div className="md:hidden text-sm font-medium truncate">
               {fileName}
             </div>
             <div className="hidden md:flex items-center">
-              <SidebarTrigger /> {/* Standard sidebar trigger for desktop */}
+              {/* Standard sidebar trigger for desktop - this trigger might be from the other sidebar system, check if needed */}
+              {/* <SidebarTrigger />  */}
               <span className="ml-2 text-sm font-medium truncate">{fileName}</span>
             </div>
             {/* Placeholder for other header actions */}
