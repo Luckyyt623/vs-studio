@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { Key, ReactNode } from 'react';
@@ -24,6 +23,14 @@ import { SheetHeader as ShadSheetHeader, SheetTitle as ShadSheetTitle, SheetDesc
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
@@ -32,9 +39,11 @@ import {
   DEFAULT_FONT_SIZE,
   DEFAULT_EDITOR_THEME,
   DEFAULT_INDENTATION,
+  DEFAULT_PROJECT_TYPE,
+  SUPPORTED_PROJECT_TYPES,
   type EditorTheme,
 } from '@/lib/constants';
-import { TerminalSquare, PanelLeft, Play, Loader2 } from 'lucide-react';
+import { LayoutDashboard, PanelLeft, Play, Loader2, FolderGit2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function CodeWriteMobilePage() {
@@ -44,6 +53,7 @@ export default function CodeWriteMobilePage() {
   const [fontSize, setFontSize] = useLocalStorage<number>('codewrite-fontsize', DEFAULT_FONT_SIZE);
   const [editorTheme, setEditorTheme] = useLocalStorage<EditorTheme>('codewrite-editortheme', DEFAULT_EDITOR_THEME);
   const [indentation, setIndentation] = useLocalStorage<number>('codewrite-indentation', DEFAULT_INDENTATION);
+  const [projectType, setProjectType] = useLocalStorage<string>('codewrite-projecttype', DEFAULT_PROJECT_TYPE);
   
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobileClient = useIsMobile();
@@ -64,7 +74,6 @@ export default function CodeWriteMobilePage() {
         description: `Failed to load Python environment: ${pyodideManager.pyodideError}`,
         variant: "destructive",
       });
-      // Add to terminal history as well
       setPythonTerminalHistory(prev => [...prev, {id: Date.now().toString(), type: 'error', content: `Pyodide Error: ${pyodideManager.pyodideError}`}]);
     }
   }, [pyodideManager.pyodideError, toast]);
@@ -82,8 +91,8 @@ export default function CodeWriteMobilePage() {
   };
 
   const handleRunCode = async () => {
-    setPythonRunOutput(null); // Clear previous Python output
-    setIframeSrcDoc(''); // Clear previous web output
+    setPythonRunOutput(null); 
+    setIframeSrcDoc(''); 
 
     if (language === 'python') {
       if (!pyodideManager.isPyodideReady) {
@@ -105,7 +114,7 @@ export default function CodeWriteMobilePage() {
       });
       setShowOutputPanel(true);
       setActiveBottomTab('output');
-    } else { // HTML, CSS, JavaScript
+    } else { 
       let srcDocContent = '';
       const iframeStyle = `<style>
         body { margin: 10px; font-family: sans-serif; color: #EEE; background-color: #282A36; }
@@ -120,7 +129,6 @@ export default function CodeWriteMobilePage() {
 
       const consoleOverride = `
         <script>
-          // Code omitted for brevity, same as original
         const originalConsoleLog = console.log;
         const originalConsoleError = console.error;
         const originalConsoleWarn = console.warn;
@@ -172,7 +180,6 @@ export default function CodeWriteMobilePage() {
 
       if (language === 'html') {
         if (code.trim().toLowerCase().includes('<html')) {
-           // If full HTML document, inject style and script carefully
           const SCRIPT_PLACEHOLDER = '<!-- SCRIPT_PLACEHOLDER -->';
           const STYLE_PLACEHOLDER = '<!-- STYLE_PLACEHOLDER -->';
           let tempCode = code;
@@ -185,7 +192,7 @@ export default function CodeWriteMobilePage() {
           }
           srcDocContent = tempCode.replace(SCRIPT_PLACEHOLDER, consoleOverride).replace(STYLE_PLACEHOLDER, iframeStyle);
 
-        } else { // HTML fragment
+        } else { 
           srcDocContent = `<!DOCTYPE html><html><head>${iframeStyle}</head><body>${code}${consoleOverride}</body></html>`;
         }
       } else if (language === 'javascript') {
@@ -194,7 +201,7 @@ export default function CodeWriteMobilePage() {
         srcDocContent = `<!DOCTYPE html><html><head><style>${code}<\/style>${iframeStyle}${consoleOverride}</head><body><p>CSS styles applied. Add HTML content or inspect this frame to see results.</p></body></html>`;
       } else {
         toast({
-          title: "Unsupported Language",
+          title: "Unsupported Language for Preview",
           description: `Live preview for ${language} is not available. Previews are supported for HTML, CSS, and JavaScript. Python/C++ output appears in a text console.`,
         });
         srcDocContent = `<!DOCTYPE html><html><head>${iframeStyle}</head><body><p>Code execution preview is primarily for HTML, CSS, and JavaScript. Running ${language} code is not directly supported in this preview.</p></body></html>`;
@@ -212,7 +219,6 @@ export default function CodeWriteMobilePage() {
       return;
     }
 
-    // Basic command parsing for "pip install"
     const parts = command.toLowerCase().split(/\s+/);
     if (parts[0] === 'pip' && parts[1] === 'install' && parts.length > 2) {
       const packagesToInstall = parts.slice(2).filter(pkg => pkg.length > 0);
@@ -229,8 +235,8 @@ export default function CodeWriteMobilePage() {
 
   const sidebarTitleContent = (
     <>
-      <TerminalSquare className="w-6 h-6 mr-2 text-accent" />
-      CodeWrite Mobile
+      <LayoutDashboard className="w-6 h-6 mr-2 text-accent" />
+      Mobile Workspace
     </>
   );
 
@@ -263,6 +269,29 @@ export default function CodeWriteMobilePage() {
           <ScrollArea className="flex-grow">
             <CustomSidebarContent>
               <SidebarGroup>
+                <SidebarGroupLabel>Project Configuration</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <div>
+                    <Label htmlFor="project-type-select" className="flex items-center mb-2 text-sm font-medium">
+                       <FolderGit2 className="w-4 h-4 mr-2" /> Project Type
+                    </Label>
+                    <Select value={projectType} onValueChange={setProjectType}>
+                      <SelectTrigger id="project-type-select" className="w-full">
+                        <SelectValue placeholder="Select project type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SUPPORTED_PROJECT_TYPES.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </SidebarGroupContent>
+              </SidebarGroup>
+
+              <SidebarGroup>
                 <SidebarGroupLabel>File Management</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <FileControls
@@ -280,10 +309,8 @@ export default function CodeWriteMobilePage() {
                     language={language}
                     onLanguageChange={(lang) => {
                       setLanguage(lang);
-                      // If switching away from Python, clear Python-specific output/history
                       if (lang !== 'python') {
                         setPythonRunOutput(null);
-                        // setPythonTerminalHistory([]); // Optionally clear history or keep it
                       }
                     }}
                     fontSize={fontSize}
@@ -298,7 +325,7 @@ export default function CodeWriteMobilePage() {
             </CustomSidebarContent>
           </ScrollArea>
           <CustomSidebarFooter className="p-4 text-xs text-muted-foreground">
-            Powered by AI & Pyodide
+            Powered by AI, Firebase &amp; Pyodide
           </CustomSidebarFooter>
         </Sidebar>
 
@@ -374,10 +401,10 @@ export default function CodeWriteMobilePage() {
                       />
                     </TabsContent>
                   </Tabs>
-                ) : ( // For HTML/JS/CSS or C++ (preview) or Python not ready
+                ) : ( 
                   <CodeOutputPanel
                     srcDoc={iframeSrcDoc}
-                    textOutput={pythonRunOutput} // Handles C++ message or Python loading errors
+                    textOutput={pythonRunOutput} 
                     onClose={() => setShowOutputPanel(false)}
                     className="h-full"
                     language={language}

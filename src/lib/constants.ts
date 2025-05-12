@@ -26,3 +26,16 @@ export const INDENTATION_OPTIONS = [
   { value: 4, label: '4 Spaces' },
 ];
 
+export const SUPPORTED_PROJECT_TYPES = [
+  { value: 'general', label: 'General Purpose / Snippets' },
+  { value: 'react-native', label: 'React Native' },
+  { value: 'flutter', label: 'Flutter' },
+  { value: 'dotnet-maui', label: '.NET MAUI (Preview)' },
+  { value: 'xamarin', label: 'Xamarin (Preview)' },
+  { value: 'unity', label: 'Unity (Game Dev - Preview)' },
+  { value: 'android-native', label: 'Android Native (Kotlin/Java - Preview)' },
+  { value: 'ios-native', label: 'iOS Native (Swift - Preview)' },
+  { value: 'web', label: 'Web App (HTML/JS/CSS)' },
+];
+
+export const DEFAULT_PROJECT_TYPE = 'general';
