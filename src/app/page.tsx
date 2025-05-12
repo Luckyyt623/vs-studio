@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { CodeEditor } from '@/components/app/code-editor';
 import { FileControls } from '@/components/app/file-controls';
 import { SettingsPanel } from '@/components/app/settings-panel';
+import { AiToolsPanel } from '@/components/app/ai-tools-panel';
 import { CodeOutputPanel } from '@/components/app/code-output-panel';
 import { PythonTerminal, type TerminalHistoryItem } from '@/components/app/python-terminal';
 import { usePyodide, type PythonExecutionResult } from '@/hooks/use-pyodide';
@@ -43,7 +44,7 @@ import {
   SUPPORTED_PROJECT_TYPES,
   type EditorTheme,
 } from '@/lib/constants';
-import { LayoutDashboard, PanelLeft, Play, Loader2, FolderGit2 } from 'lucide-react';
+import { LayoutDashboard, PanelLeft, Play, Loader2, FolderGit2, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function CodeWriteMobilePage() {
@@ -89,6 +90,17 @@ export default function CodeWriteMobilePage() {
     setCode(content);
     setFileName(name);
   };
+
+  const handleAiGeneratedContentInsert = (content: string, type: 'code' | 'docs' | 'tests') => {
+    // For now, append all generated content to the editor.
+    // This could be made more sophisticated (e.g., replace selection, open in new tab, etc.)
+    setCode(prevCode => `${prevCode}\n\n${type === 'docs' ? `/**\n * ${content.split('\n').join('\n * ')}\n */` : content}`);
+    toast({
+      title: "Content Inserted",
+      description: `AI-generated ${type} have been appended to the editor.`,
+    });
+  };
+
 
   const handleRunCode = async () => {
     setPythonRunOutput(null); 
@@ -319,6 +331,18 @@ export default function CodeWriteMobilePage() {
                     onEditorThemeChange={setEditorTheme}
                     indentation={indentation}
                     onIndentationChange={setIndentation}
+                  />
+                </SidebarGroupContent>
+              </SidebarGroup>
+              <SidebarGroup>
+                <SidebarGroupLabel className="flex items-center">
+                    <Bot className="w-4 h-4 mr-2" /> AI Assistant Tools
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <AiToolsPanel
+                    currentCode={code}
+                    currentLanguage={language}
+                    onGeneratedContentInsert={handleAiGeneratedContentInsert}
                   />
                 </SidebarGroupContent>
               </SidebarGroup>
