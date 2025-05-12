@@ -7,6 +7,7 @@ import { CodeEditor } from '@/components/app/code-editor';
 import { FileControls } from '@/components/app/file-controls';
 import { SettingsPanel } from '@/components/app/settings-panel';
 import { AiToolsPanel } from '@/components/app/ai-tools-panel';
+import { PushNotificationsPanel } from '@/components/app/push-notifications-panel'; // Added import
 import { CodeOutputPanel } from '@/components/app/code-output-panel';
 import { PythonTerminal, type TerminalHistoryItem } from '@/components/app/python-terminal';
 import { usePyodide, type PythonExecutionResult } from '@/hooks/use-pyodide';
@@ -33,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch'; // Added import for Offline Sync toggle
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
@@ -45,7 +47,7 @@ import {
   SUPPORTED_PROJECT_TYPES,
   type EditorTheme,
 } from '@/lib/constants';
-import { LayoutDashboard, PanelLeft, Play, Loader2, FolderGit2, Bot } from 'lucide-react';
+import { LayoutDashboard, PanelLeft, Play, Loader2, FolderGit2, Bot, Smartphone, Send, WifiOff } from 'lucide-react'; // Added icons
 import { cn } from '@/lib/utils';
 
 export default function CodeWriteMobilePage() {
@@ -258,6 +260,9 @@ export default function CodeWriteMobilePage() {
     </>
   );
 
+  // Ensure state consistency after hydration
+  const currentFileName = hasMounted ? fileName : 'untitled.txt';
+
   return (
       <div className="flex h-screen bg-background">
         <Sidebar open={sidebarOpen} onOpenChange={setSidebarOpen} side="left">
@@ -268,8 +273,8 @@ export default function CodeWriteMobilePage() {
                   {sidebarTitleContent}
                 </ShadSheetTitle>
                  <ShadSheetDescription className="text-xs text-muted-foreground">
-                  {hasMounted && pyodideManager.isPyodideLoading && language === 'python' && "Python loading..." }
-                  {hasMounted && pyodideManager.pyodideError && language === 'python' && "Python error!" }
+                  {hasMounted && pyodideManager.isPyodideLoading && language === 'python' ? "Python loading..." : '' }
+                  {hasMounted && pyodideManager.pyodideError && language === 'python' ? "Python error!" : '' }
                 </ShadSheetDescription>
               </ShadSheetHeader>
             </>
@@ -352,6 +357,43 @@ export default function CodeWriteMobilePage() {
                   />
                 </SidebarGroupContent>
               </SidebarGroup>
+
+              {/* Mobile Specific Features */}
+              <SidebarGroup>
+                  <SidebarGroupLabel className="flex items-center">
+                      <Smartphone className="w-4 h-4 mr-2" /> Device Integration
+                  </SidebarGroupLabel>
+                  <SidebarGroupContent className="space-y-2 p-1">
+                      <Button variant="outline" size="sm" className="w-full justify-start" disabled>
+                          <Smartphone className="w-4 h-4 mr-2" /> Connect Emulator/Simulator
+                      </Button>
+                      <p className="text-xs text-muted-foreground px-1">Requires local SDK setup (Android Studio / Xcode).</p>
+                  </SidebarGroupContent>
+              </SidebarGroup>
+              <SidebarGroup>
+                  <SidebarGroupLabel className="flex items-center">
+                      <Send className="w-4 h-4 mr-2" /> Push Notifications (FCM)
+                  </SidebarGroupLabel>
+                  <SidebarGroupContent>
+                      <PushNotificationsPanel />
+                  </SidebarGroupContent>
+              </SidebarGroup>
+              <SidebarGroup>
+                  <SidebarGroupLabel className="flex items-center">
+                      <WifiOff className="w-4 h-4 mr-2" /> Offline Sync
+                  </SidebarGroupLabel>
+                  <SidebarGroupContent className="space-y-2 p-1">
+                      <div className="flex items-center justify-between space-x-2 px-1">
+                          <Label htmlFor="offline-sync-switch" className="text-sm">Enable Offline Persistence</Label>
+                          <Switch id="offline-sync-switch" disabled checked={false} />
+                      </div>
+                       <p className="text-xs text-muted-foreground px-1">
+                          Handled via Firebase SDK (Firestore/Realtime DB). Enable in your project settings and code.
+                       </p>
+                  </SidebarGroupContent>
+              </SidebarGroup>
+
+
             </CustomSidebarContent>
           </ScrollArea>
           <CustomSidebarFooter className="p-4 text-xs text-muted-foreground">
@@ -367,10 +409,10 @@ export default function CodeWriteMobilePage() {
                 <span className="sr-only">Open sidebar</span>
               </Button>
               <div className="md:hidden text-sm font-medium truncate ml-2">
-                {fileName}
+                {currentFileName}
               </div>
               <div className="hidden md:flex items-center ml-2">
-                <span className="text-sm font-medium truncate">{fileName}</span>
+                <span className="text-sm font-medium truncate">{currentFileName}</span>
               </div>
             </div>
             <div className="flex items-center space-x-2">
