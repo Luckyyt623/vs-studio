@@ -3,9 +3,10 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { XCircle, QrCode, Smartphone } from "lucide-react";
+import { XCircle, QrCode, Smartphone, RefreshCw, ArrowLeft, ArrowRight, Home } from "lucide-react";
 import { QRCodeSVG } from 'qrcode.react';
 import { cn } from "@/lib/utils";
 import {
@@ -18,84 +19,120 @@ import {
 
 
 interface CodeOutputPanelProps {
-  srcDoc?: string;
-  textOutput?: { stdout?: string; stderr?: string; error?: string };
+  srcDoc?: string; // For web preview iframe
+  textOutput?: { stdout?: string; stderr?: string; error?: string }; // For console/terminal output
   language?: string;
   onClose: () => void;
   className?: string;
-  showQrCodeToggle?: boolean; // New prop to control QR code button visibility
+  showQrCodeToggle?: boolean; // Prop to control QR code button visibility in web preview
+  isConsole?: boolean; // Differentiates between web preview and console output display
 }
 
-export function CodeOutputPanel({ srcDoc, textOutput, language, onClose, className, showQrCodeToggle = false }: CodeOutputPanelProps) {
-  const hasTextOutput = textOutput && (textOutput.stdout || textOutput.stderr || textOutput.error);
+export function CodeOutputPanel({
+    srcDoc,
+    textOutput,
+    language,
+    onClose,
+    className,
+    showQrCodeToggle = false,
+    isConsole = false
+}: CodeOutputPanelProps) {
   const [showQrDialog, setShowQrDialog] = useState(false);
   const [qrDataUri, setQrDataUri] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState('/'); // Simulated URL for preview
+
+  const hasTextOutput = textOutput && (textOutput.stdout || textOutput.stderr || textOutput.error);
 
   const generateDataUri = (htmlContent: string): string => {
-    // Basic check for size, might need refinement
-    if (htmlContent.length > 2000) { // Arbitrary limit, data URIs can get very long
+    if (htmlContent.length > 2000) {
       console.warn("HTML content might be too large for a reliable Data URI QR Code.");
-      // Potentially truncate or show a warning in the UI
     }
     return `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
   }
 
   const handleToggleQrCode = () => {
     if (srcDoc) {
-      // Generate data URI on demand to avoid storing large URIs in state unnecessarily long
       const dataUri = generateDataUri(srcDoc);
       setQrDataUri(dataUri);
       setShowQrDialog(true);
     }
   };
 
+  // Simulate iframe reload - doesn't actually reload content from server, just resets srcDoc if possible
+  const handleRefresh = () => {
+      const iframe = document.getElementById('code-preview-iframe') as HTMLIFrameElement | null;
+      if (iframe && srcDoc) {
+          // Re-setting srcdoc forces a reload of the content
+          iframe.srcdoc = srcDoc;
+      }
+  }
+
   return (
     <div className={cn("flex flex-col h-full bg-primary text-primary-foreground", className)}>
-      <div className="flex items-center justify-between p-2 bg-secondary border-b border-border">
-        <h3 className="text-sm font-semibold">Output / Preview</h3>
-        <div className="flex items-center space-x-1">
+      {/* Header specific to Web Preview */}
+      {!isConsole && (
+        <div className="flex items-center space-x-1 p-1 bg-secondary border-b border-border h-10 shrink-0">
+          <Button variant="ghost" size="icon" className="w-7 h-7" disabled><ArrowLeft className="w-4 h-4" /></Button>
+          <Button variant="ghost" size="icon" className="w-7 h-7" disabled><ArrowRight className="w-4 h-4" /></Button>
+          <Button variant="ghost" size="icon" className="w-7 h-7" onClick={handleRefresh}><RefreshCw className="w-4 h-4" /></Button>
+          <Input
+            type="text"
+            readOnly
+            value={previewUrl}
+            className="h-7 flex-1 bg-background text-xs rounded-sm px-2"
+            aria-label="Preview URL"
+          />
           {showQrCodeToggle && srcDoc && (
-             <Button variant="ghost" size="icon" onClick={handleToggleQrCode} aria-label="Show QR Code for mobile preview" title="Show QR Code for mobile preview">
-               <QrCode className="w-5 h-5" />
+             <Button variant="ghost" size="icon" onClick={handleToggleQrCode} aria-label="Show QR Code for mobile preview" title="Show QR Code for mobile preview" className="w-7 h-7">
+               <QrCode className="w-4 h-4" />
              </Button>
           )}
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close output panel">
-            <XCircle className="w-5 h-5" />
-          </Button>
         </div>
+      )}
+
+      {/* Content Area */}
+      <div className="flex-grow overflow-auto">
+        {/* Web Preview iframe */}
+        {!isConsole && srcDoc && (
+          <iframe
+            id="code-preview-iframe"
+            srcDoc={srcDoc}
+            title="Code Preview"
+            sandbox="allow-scripts allow-same-origin allow-modals allow-forms allow-popups"
+            className="w-full h-full border-0"
+            aria-label="Code execution preview"
+          />
+        )}
+        {!isConsole && !srcDoc && (
+            <div className="p-4 text-muted-foreground h-full flex items-center justify-center">
+                Run HTML/JS/CSS code to see the web preview.
+            </div>
+        )}
+
+        {/* Console Output */}
+        {isConsole && hasTextOutput && (
+          <ScrollArea className="h-full p-2 font-mono text-xs">
+            {textOutput.stdout && (
+              <pre className="whitespace-pre-wrap text-primary-foreground">{textOutput.stdout}</pre>
+            )}
+            {textOutput.stderr && (
+              <pre className="whitespace-pre-wrap text-red-400">{textOutput.stderr}</pre>
+            )}
+            {textOutput.error && !textOutput.stderr?.includes(textOutput.error) && (
+              <pre className="whitespace-pre-wrap text-destructive">{`Execution Error: ${textOutput.error}`}</pre>
+            )}
+             {/* Spacer */}
+            <div className="h-4"></div>
+          </ScrollArea>
+        )}
+        {isConsole && !hasTextOutput && (
+           <div className="p-4 text-muted-foreground h-full flex items-center justify-center">
+            {language === 'python' ? 'Run Python code to see output.' :
+             language === 'cpp' ? 'C++ execution output will appear here (if supported).' :
+             'Console output (e.g., from console.log) will appear here.'}
+          </div>
+        )}
       </div>
-
-      {srcDoc && !hasTextOutput && language !== 'python' && language !== 'cpp' && (
-        <iframe
-          srcDoc={srcDoc}
-          title="Code Preview"
-          sandbox="allow-scripts allow-same-origin allow-modals allow-forms allow-popups"
-          className="flex-grow w-full h-full border-0"
-          aria-label="Code execution preview"
-        />
-      )}
-
-      {hasTextOutput && (language === 'python' || language === 'cpp') && (
-        <ScrollArea className="flex-grow p-4 font-mono text-sm">
-          {textOutput.stdout && (
-            <pre className="whitespace-pre-wrap text-primary-foreground">{textOutput.stdout}</pre>
-          )}
-          {textOutput.stderr && (
-            <pre className="whitespace-pre-wrap text-red-400">{textOutput.stderr}</pre>
-          )}
-          {textOutput.error && !textOutput.stderr?.includes(textOutput.error) && (
-             <pre className="whitespace-pre-wrap text-destructive">{`Execution Error: ${textOutput.error}`}</pre>
-          )}
-        </ScrollArea>
-      )}
-
-      {!srcDoc && !hasTextOutput && (
-         <div className="flex-grow p-4 text-muted-foreground">
-           {language === 'python' ? 'Run Python code to see output.' :
-            language === 'cpp' ? 'C++ execution in browser is a preview and not supported for running.' :
-            'Run code to see output or preview.'}
-         </div>
-      )}
 
       {/* QR Code Dialog */}
       <Dialog open={showQrDialog} onOpenChange={setShowQrDialog}>
@@ -110,16 +147,15 @@ export function CodeOutputPanel({ srcDoc, textOutput, language, onClose, classNa
           <div className="flex flex-col items-center justify-center p-4">
              {qrDataUri ? (
                 <>
-                    <QRCodeSVG value={qrDataUri} size={256} className="bg-white p-2 rounded-md shadow-md" />
+                    <QRCodeSVG value={qrDataUri} size={256} level="L" className="bg-white p-2 rounded-md shadow-md" />
                     <Alert variant="default" className="mt-4 text-xs">
                       <AlertDescription>
-                        This QR code links to a self-contained HTML page (Data URI). Previews may fail if the code is too large or relies on external resources not accessible from the data URI context.
+                        This QR code links to a self-contained HTML page (Data URI). Previews may fail if the code is too large or relies on external resources not accessible from the data URI context. Level 'L' QR used for smaller size.
                       </AlertDescription>
                     </Alert>
                 </>
              ) : (
                 <p className="text-muted-foreground">Generating QR code...</p>
-                // Optionally show a loader here
              )}
           </div>
         </DialogContent>
@@ -127,3 +163,5 @@ export function CodeOutputPanel({ srcDoc, textOutput, language, onClose, classNa
     </div>
   );
 }
+
+    

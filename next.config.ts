@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -16,8 +17,16 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+       { // Added for potential local assets or future dev needs
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '9002', // Match your dev server port if needed
+        pathname: '/**',
+      },
     ],
   },
 };
 
 export default nextConfig;
+
+    
