@@ -14,7 +14,8 @@ enum Activity {
   Git,
   Debug,
   Extensions,
-  Firebase
+  Firebase,
+  Settings // Added for unique key
 }
 
 interface ActivityBarProps {
@@ -31,6 +32,7 @@ const activityItems = [
   { id: Activity.Extensions, icon: Puzzle, label: 'Extensions' },
 ];
 
+// Use the distinct enum value for Settings
 const bottomActivityItems = [
     // { id: Activity.Account, icon: User, label: 'Accounts'}, // Example
     { id: Activity.Settings, icon: Settings, label: 'Manage'}
@@ -42,7 +44,7 @@ export const ActivityBar: FC<ActivityBarProps> = ({ active, onSelect }) => {
       <TooltipProvider delayDuration={0}>
         <div className="flex flex-col items-center space-y-1">
           {activityItems.map((item) => (
-            <Tooltip key={item.id}>
+            <Tooltip key={`top-${item.id}`}> {/* Added prefix just in case */}
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
@@ -66,16 +68,18 @@ export const ActivityBar: FC<ActivityBarProps> = ({ active, onSelect }) => {
          <div className="flex flex-col items-center space-y-1">
            {/* Example: Bottom icons like Settings */}
             {bottomActivityItems.map((item) => (
-            <Tooltip key={item.id}>
+            <Tooltip key={`bottom-${item.id}`}> {/* Ensured unique key */}
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
                   className={cn(
                     "w-10 h-10 rounded-md",
-                    active === item.id ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                     // Settings button typically doesn't show 'active' state like main panel triggers
+                     // active === item.id ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                     'text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
-                //   onClick={() => onSelect(item.id)} // Assuming Settings doesn't change the main panel view
+                  // onClick={() => onSelect(item.id)} // Settings might open a modal/dialog, not change main panel view
                   aria-label={item.label}
                 >
                   <item.icon className="w-5 h-5" />
@@ -91,5 +95,3 @@ export const ActivityBar: FC<ActivityBarProps> = ({ active, onSelect }) => {
     </div>
   );
 };
-
-    

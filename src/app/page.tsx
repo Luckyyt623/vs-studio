@@ -12,6 +12,9 @@ import { CodeOutputPanel } from '@/components/app/code-output-panel';
 import { PythonTerminal, type TerminalHistoryItem } from '@/components/app/python-terminal';
 import { DebuggingPanel } from '@/components/app/debugging-panel';
 import { FirebaseTestLabPanel } from '@/components/app/test-lab-panel';
+import { AndroidEmulatorPanel } from '@/components/app/android-emulator-panel';
+import { IosSimulatorPanel } from '@/components/app/ios-simulator-panel'; // Correct import
+import { OfflineSyncPanel } from '@/components/app/offline-sync-panel'; // Correct import
 import { usePyodide, type PythonExecutionResult } from '@/hooks/use-pyodide';
 import { TopBar } from '@/components/layout/top-bar';
 import { ActivityBar } from '@/components/layout/activity-bar';
@@ -41,7 +44,8 @@ enum Activity {
   Git,
   Debug,
   Extensions,
-  Firebase // Example custom icon
+  Firebase,
+  Settings // Added for unique key in ActivityBar
 }
 
 // Enum for Right/Bottom Panel Tabs
@@ -77,6 +81,29 @@ export default function CodeWriteMobilePage() {
   useEffect(() => {
     setHasMounted(true);
   }, []);
+
+  // Hydration-safe state for filename derived from local storage
+  const [hydratedFileName, setHydratedFileName] = useState('untitled.txt');
+  useEffect(() => {
+    if (hasMounted) {
+      setHydratedFileName(fileName);
+    }
+  }, [hasMounted, fileName]);
+
+  // Hydration-safe state for pyodide loading/error status
+  const [pyodideStatus, setPyodideStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  useEffect(() => {
+    if (hasMounted) {
+      if (pyodideManager.pyodideError) {
+        setPyodideStatus('error');
+      } else if (pyodideManager.isPyodideReady) {
+        setPyodideStatus('ready');
+      } else {
+        setPyodideStatus('loading');
+      }
+    }
+  }, [hasMounted, pyodideManager.isPyodideReady, pyodideManager.pyodideError]);
+
 
   // Output states
   const [iframeSrcDoc, setIframeSrcDoc] = useState('');
@@ -230,22 +257,6 @@ export default function CodeWriteMobilePage() {
     }
   };
 
-   // Render loading state or error if Pyodide is not ready
-  // if (!hasMounted || (language === 'python' && !pyodideManager.isPyodideReady && !pyodideManager.pyodideError)) {
-  //   return (
-  //     <div className="flex h-screen items-center justify-center bg-background text-foreground">
-  //       <Loader2 className="w-8 h-8 mr-2 animate-spin" /> Loading Workspace...
-  //     </div>
-  //   );
-  // }
-  // if (hasMounted && language === 'python' && pyodideManager.pyodideError) {
-  //    return (
-  //     <div className="flex h-screen items-center justify-center bg-background text-destructive p-4 text-center">
-  //        Error loading Python environment: {pyodideManager.pyodideError}
-  //     </div>
-  //   );
-  // }
-
   const toggleExplorer = () => setExplorerOpen(!explorerOpen);
   const toggleRightPanel = () => setRightPanelOpen(!rightPanelOpen);
   const toggleBottomPanel = () => setBottomPanelOpen(!bottomPanelOpen);
@@ -254,10 +265,10 @@ export default function CodeWriteMobilePage() {
     <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden">
       <TopBar
         projectName="CodeWrite Mobile"
-        fileName={fileName}
+        fileName={hydratedFileName} // Use hydrated state
         onRunCode={handleRunCode}
-        isRunDisabled={hasMounted && pyodideManager.isPyodideLoading && language === 'python'}
-        isLoading={hasMounted && pyodideManager.isPyodideLoading && language === 'python'}
+        isRunDisabled={!hasMounted || (pyodideStatus === 'loading' && language === 'python')}
+        isLoading={hasMounted && pyodideManager.isInstallingPackages}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -265,16 +276,21 @@ export default function CodeWriteMobilePage() {
 
         {explorerOpen && (
           <ExplorerPanel
+            // Pass necessary props for child components if they are rendered inside ExplorerPanel
+            // For example:
             onLoadFile={handleLoadFile}
             onFileNameChange={setFileName}
             fileName={fileName}
-            code={code} // Pass code for saving
+            code={code}
             language={language}
             onLanguageChange={(lang) => {
               setLanguage(lang);
-               if (lang !== 'python') {
-                 setPythonRunOutput(null);
-               }
+              if (lang !== 'python') {
+                setPythonRunOutput(null); // Clear Python output if language changes
+                if (activeBottomTab === PanelTab.Terminal) {
+                  setActiveBottomTab(PanelTab.Console); // Switch from terminal if not Python
+                }
+              }
             }}
             fontSize={fontSize}
             onFontSizeChange={setFontSize}
@@ -285,40 +301,59 @@ export default function CodeWriteMobilePage() {
             projectType={projectType}
             onProjectTypeChange={setProjectType}
           >
-            {/* Pass specific components to the explorer panel */}
-             <div className="p-2 space-y-4">
-                 <FileControls
-                    code={code}
-                    fileName={fileName}
-                    onFileNameChange={setFileName}
-                    onLoad={handleLoadFile}
-                  />
-                 <SettingsPanel
-                    language={language}
-                    onLanguageChange={(lang) => {
-                      setLanguage(lang);
-                      if (lang !== 'python') {
-                        setPythonRunOutput(null);
-                      }
-                    }}
-                    fontSize={fontSize}
-                    onFontSizeChange={setFontSize}
-                    editorTheme={editorTheme}
-                    onEditorThemeChange={setEditorTheme}
-                    indentation={indentation}
-                    onIndentationChange={setIndentation}
-                  />
-                  {/* Add other sidebar items like Debugging, Test Lab etc. here or conditionally based on activeActivity */}
+             {/* Components that now live directly within ExplorerPanel */}
+              <div className="p-2 space-y-4">
+                  <FileControls
+                      code={code}
+                      fileName={fileName}
+                      onFileNameChange={setFileName}
+                      onLoad={handleLoadFile}
+                    />
+                  <SettingsPanel
+                      language={language}
+                      onLanguageChange={(lang) => {
+                          setLanguage(lang);
+                          if (lang !== 'python') {
+                          setPythonRunOutput(null);
+                          }
+                      }}
+                      fontSize={fontSize}
+                      onFontSizeChange={setFontSize}
+                      editorTheme={editorTheme}
+                      onEditorThemeChange={setEditorTheme}
+                      indentation={indentation}
+                      onIndentationChange={setIndentation}
+                      // projectType={projectType} // Removed as project type is not in SettingsPanel props
+                      // onProjectTypeChange={setProjectType} // Removed
+                    />
+
+                  {/* Placeholder for Python status */}
+                  {hasMounted && language === 'python' && (
+                    <div className="px-1 pt-2">
+                      {pyodideStatus === 'loading' && (
+                        <p className="text-xs text-muted-foreground mt-1">Python environment loading...</p>
+                      )}
+                      {pyodideStatus === 'error' && (
+                        <p className="text-xs text-destructive mt-1">Python environment error!</p>
+                      )}
+                      {pyodideStatus === 'ready' && (
+                         <p className="text-xs text-green-500 mt-1">Python environment ready.</p>
+                      )}
+                    </div>
+                  )}
                    <DebuggingPanel />
                    <FirebaseTestLabPanel />
                    <PushNotificationsPanel />
-             </div>
+                   <AndroidEmulatorPanel />
+                   <IosSimulatorPanel />
+                   <OfflineSyncPanel />
+              </div>
           </ExplorerPanel>
         )}
 
         {/* Main Area: Editor + Bottom Panel */}
         <div className="flex flex-col flex-1 overflow-hidden">
-          <EditorArea fileName={fileName}>
+          <EditorArea fileName={hydratedFileName}>
              <CodeEditor
                 code={code}
                 onCodeChange={setCode}
@@ -349,8 +384,8 @@ export default function CodeWriteMobilePage() {
                    <PythonTerminal
                         onCommand={handlePythonTerminalCommand}
                         history={pythonTerminalHistory}
-                        isLoading={pyodideManager.isInstallingPackages}
-                        isDisabled={!pyodideManager.isPyodideReady || pyodideManager.isPyodideLoading}
+                        isLoading={hasMounted && pyodideManager.isInstallingPackages}
+                        isDisabled={!hasMounted || pyodideStatus !== 'ready'}
                         className="h-full"
                       />
                 )}
@@ -406,5 +441,3 @@ export default function CodeWriteMobilePage() {
     </div>
   );
 }
- 
-    
