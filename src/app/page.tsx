@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Key, ReactNode } from 'react';
@@ -59,6 +60,11 @@ export default function CodeWriteMobilePage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobileClient = useIsMobile();
   const { toast } = useToast();
+
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   const [showOutputPanel, setShowOutputPanel] = useState(false);
   const [iframeSrcDoc, setIframeSrcDoc] = useState('');
@@ -262,8 +268,8 @@ export default function CodeWriteMobilePage() {
                   {sidebarTitleContent}
                 </ShadSheetTitle>
                  <ShadSheetDescription className="text-xs text-muted-foreground">
-                  { pyodideManager.isPyodideLoading && language === 'python' && "Python loading..." }
-                  { pyodideManager.pyodideError && language === 'python' && "Python error!" }
+                  {hasMounted && pyodideManager.isPyodideLoading && language === 'python' && "Python loading..." }
+                  {hasMounted && pyodideManager.pyodideError && language === 'python' && "Python error!" }
                 </ShadSheetDescription>
               </ShadSheetHeader>
             </>
@@ -272,9 +278,9 @@ export default function CodeWriteMobilePage() {
               <CustomSidebarTitle>
                 {sidebarTitleContent}
               </CustomSidebarTitle>
-               { pyodideManager.isPyodideLoading && language === 'python' && 
+               {hasMounted && pyodideManager.isPyodideLoading && language === 'python' && 
                 <p className="text-xs text-muted-foreground mt-1">Python environment loading...</p> }
-               { pyodideManager.pyodideError && language === 'python' && 
+               {hasMounted && pyodideManager.pyodideError && language === 'python' && 
                 <p className="text-xs text-destructive mt-1">Python environment error!</p> }
             </CustomSidebarHeader>
           )}
@@ -368,14 +374,26 @@ export default function CodeWriteMobilePage() {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-               {pyodideManager.isPyodideLoading && language === 'python' && (
+               {hasMounted && pyodideManager.isPyodideLoading && language === 'python' && (
                 <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
               )}
-              <Button onClick={handleRunCode} size="sm" variant="outline" className="hidden md:flex items-center" disabled={pyodideManager.isPyodideLoading && language === 'python'}>
+              <Button
+                onClick={handleRunCode}
+                size="sm"
+                variant="outline"
+                className="hidden md:flex items-center"
+                disabled={hasMounted && pyodideManager.isPyodideLoading && language === 'python'}
+              >
                 <Play className="w-4 h-4 mr-2" />
                 Run Code
               </Button>
-              <Button onClick={handleRunCode} size="icon" variant="ghost" className="md:hidden" disabled={pyodideManager.isPyodideLoading && language === 'python'}>
+              <Button
+                onClick={handleRunCode}
+                size="icon"
+                variant="ghost"
+                className="md:hidden"
+                disabled={hasMounted && pyodideManager.isPyodideLoading && language === 'python'}
+              >
                 <Play className="w-5 h-5" />
                 <span className="sr-only">Run Code</span>
               </Button>
