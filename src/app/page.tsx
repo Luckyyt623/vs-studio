@@ -7,22 +7,24 @@ import { CodeEditor } from '@/components/app/code-editor';
 import { FileControls } from '@/components/app/file-controls';
 import { SettingsPanel } from '@/components/app/settings-panel';
 import { AiToolsPanel } from '@/components/app/ai-tools-panel';
-import { PushNotificationsPanel } from '@/components/app/push-notifications-panel'; // Added import
+import { PushNotificationsPanel } from '@/components/app/push-notifications-panel';
 import { CodeOutputPanel } from '@/components/app/code-output-panel';
 import { PythonTerminal, type TerminalHistoryItem } from '@/components/app/python-terminal';
+import { DebuggingPanel } from '@/components/app/debugging-panel'; // Added import
+import { FirebaseTestLabPanel } from '@/components/app/test-lab-panel'; // Added import
 import { usePyodide, type PythonExecutionResult } from '@/hooks/use-pyodide';
 import {
   Sidebar,
-  SidebarContent as CustomSidebarContent, 
-  SidebarHeader as CustomSidebarHeader, 
+  SidebarContent as CustomSidebarContent,
+  SidebarHeader as CustomSidebarHeader,
   SidebarInset,
-  SidebarTitle as CustomSidebarTitle,   
+  SidebarTitle as CustomSidebarTitle,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarGroupContent,
-  SidebarFooter as CustomSidebarFooter, 
+  SidebarFooter as CustomSidebarFooter,
 } from '@/components/ui/sidebar-custom';
-import { SheetHeader as ShadSheetHeader, SheetTitle as ShadSheetTitle, SheetDescription as ShadSheetDescription } from '@/components/ui/sheet'; 
+import { SheetHeader as ShadSheetHeader, SheetTitle as ShadSheetTitle, SheetDescription as ShadSheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch'; // Added import for Offline Sync toggle
+import { Switch } from '@/components/ui/switch';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
@@ -47,7 +49,7 @@ import {
   SUPPORTED_PROJECT_TYPES,
   type EditorTheme,
 } from '@/lib/constants';
-import { LayoutDashboard, PanelLeft, Play, Loader2, FolderGit2, Bot, Smartphone, Send, WifiOff } from 'lucide-react'; // Added icons
+import { LayoutDashboard, PanelLeft, Play, Loader2, FolderGit2, Bot, Smartphone, Send, WifiOff, Bug, FlaskConical, CloudCog } from 'lucide-react'; // Added icons
 import { cn } from '@/lib/utils';
 
 export default function CodeWriteMobilePage() {
@@ -58,7 +60,7 @@ export default function CodeWriteMobilePage() {
   const [editorTheme, setEditorTheme] = useLocalStorage<EditorTheme>('codewrite-editortheme', DEFAULT_EDITOR_THEME);
   const [indentation, setIndentation] = useLocalStorage<number>('codewrite-indentation', DEFAULT_INDENTATION);
   const [projectType, setProjectType] = useLocalStorage<string>('codewrite-projecttype', DEFAULT_PROJECT_TYPE);
-  
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobileClient = useIsMobile();
   const { toast } = useToast();
@@ -73,11 +75,12 @@ export default function CodeWriteMobilePage() {
   const [pythonRunOutput, setPythonRunOutput] = useState<PythonExecutionResult | null>(null);
   const [pythonTerminalHistory, setPythonTerminalHistory] = useState<TerminalHistoryItem[]>([]);
   const [activeBottomTab, setActiveBottomTab] = useState<'output' | 'terminal'>('output');
+  const [showQrCode, setShowQrCode] = useState(false); // State for QR code visibility
 
   const pyodideManager = usePyodide();
 
   useEffect(() => {
-    if (pyodideManager.pyodideError) {
+    if (hasMounted && pyodideManager.pyodideError) {
       toast({
         title: "Pyodide Error",
         description: `Failed to load Python environment: ${pyodideManager.pyodideError}`,
@@ -85,13 +88,13 @@ export default function CodeWriteMobilePage() {
       });
       setPythonTerminalHistory(prev => [...prev, {id: Date.now().toString(), type: 'error', content: `Pyodide Error: ${pyodideManager.pyodideError}`}]);
     }
-  }, [pyodideManager.pyodideError, toast]);
+  }, [hasMounted, pyodideManager.pyodideError, toast]);
 
   useEffect(() => {
-     if (language === 'python' && pyodideManager.isPyodideReady && pythonTerminalHistory.length === 0) {
+     if (hasMounted && language === 'python' && pyodideManager.isPyodideReady && pythonTerminalHistory.length === 0) {
         setPythonTerminalHistory([{id: 'init-msg', type: 'info', content: 'Python environment ready. Use "pip install <package>" to install packages.'}]);
      }
-  }, [language, pyodideManager.isPyodideReady, pythonTerminalHistory.length]);
+  }, [hasMounted, language, pyodideManager.isPyodideReady, pythonTerminalHistory.length]);
 
 
   const handleLoadFile = (content: string, name: string) => {
@@ -100,8 +103,6 @@ export default function CodeWriteMobilePage() {
   };
 
   const handleAiGeneratedContentInsert = (content: string, type: 'code' | 'docs' | 'tests') => {
-    // For now, append all generated content to the editor.
-    // This could be made more sophisticated (e.g., replace selection, open in new tab, etc.)
     setCode(prevCode => `${prevCode}\n\n${type === 'docs' ? `/**\n * ${content.split('\n').join('\n * ')}\n */` : content}`);
     toast({
       title: "Content Inserted",
@@ -111,8 +112,9 @@ export default function CodeWriteMobilePage() {
 
 
   const handleRunCode = async () => {
-    setPythonRunOutput(null); 
-    setIframeSrcDoc(''); 
+    setPythonRunOutput(null);
+    setIframeSrcDoc('');
+    setShowQrCode(false); // Hide QR code on new run
 
     if (language === 'python') {
       if (!pyodideManager.isPyodideReady) {
@@ -128,13 +130,14 @@ export default function CodeWriteMobilePage() {
       setShowOutputPanel(true);
       setActiveBottomTab('output');
     } else if (language === 'cpp') {
-      setPythonRunOutput({ 
-        stdout: '', 
+      setPythonRunOutput({
+        stdout: '',
         stderr: 'C++ execution in the browser is a preview feature and not supported for running code. This typically requires a server-side compilation and execution environment.',
       });
       setShowOutputPanel(true);
       setActiveBottomTab('output');
-    } else { 
+    } else {
+      // Logic for HTML, CSS, JS preview
       let srcDocContent = '';
       const iframeStyle = `<style>
         body { margin: 10px; font-family: sans-serif; color: #EEE; background-color: #282A36; }
@@ -199,6 +202,7 @@ export default function CodeWriteMobilePage() {
       `;
 
       if (language === 'html') {
+        // Existing HTML logic...
         if (code.trim().toLowerCase().includes('<html')) {
           const SCRIPT_PLACEHOLDER = '<!-- SCRIPT_PLACEHOLDER -->';
           const STYLE_PLACEHOLDER = '<!-- STYLE_PLACEHOLDER -->';
@@ -211,8 +215,7 @@ export default function CodeWriteMobilePage() {
              tempCode = `<head>${STYLE_PLACEHOLDER}${SCRIPT_PLACEHOLDER}</head><body>${tempCode}</body>`;
           }
           srcDocContent = tempCode.replace(SCRIPT_PLACEHOLDER, consoleOverride).replace(STYLE_PLACEHOLDER, iframeStyle);
-
-        } else { 
+        } else {
           srcDocContent = `<!DOCTYPE html><html><head>${iframeStyle}</head><body>${code}${consoleOverride}</body></html>`;
         }
       } else if (language === 'javascript') {
@@ -220,12 +223,13 @@ export default function CodeWriteMobilePage() {
       } else if (language === 'css') {
         srcDocContent = `<!DOCTYPE html><html><head><style>${code}<\/style>${iframeStyle}${consoleOverride}</head><body><p>CSS styles applied. Add HTML content or inspect this frame to see results.</p></body></html>`;
       } else {
-        toast({
+         toast({
           title: "Unsupported Language for Preview",
           description: `Live preview for ${language} is not available. Previews are supported for HTML, CSS, and JavaScript. Python/C++ output appears in a text console.`,
         });
         srcDocContent = `<!DOCTYPE html><html><head>${iframeStyle}</head><body><p>Code execution preview is primarily for HTML, CSS, and JavaScript. Running ${language} code is not directly supported in this preview.</p></body></html>`;
       }
+
       setIframeSrcDoc(srcDocContent);
       setShowOutputPanel(true);
       setActiveBottomTab('output');
@@ -275,6 +279,7 @@ export default function CodeWriteMobilePage() {
                  <ShadSheetDescription className="text-xs text-muted-foreground">
                   {hasMounted && pyodideManager.isPyodideLoading && language === 'python' ? "Python loading..." : '' }
                   {hasMounted && pyodideManager.pyodideError && language === 'python' ? "Python error!" : '' }
+                  {!hasMounted ? 'Loading workspace...' : ''}
                 </ShadSheetDescription>
               </ShadSheetHeader>
             </>
@@ -283,10 +288,11 @@ export default function CodeWriteMobilePage() {
               <CustomSidebarTitle>
                 {sidebarTitleContent}
               </CustomSidebarTitle>
-               {hasMounted && pyodideManager.isPyodideLoading && language === 'python' && 
+               {hasMounted && pyodideManager.isPyodideLoading && language === 'python' &&
                 <p className="text-xs text-muted-foreground mt-1">Python environment loading...</p> }
-               {hasMounted && pyodideManager.pyodideError && language === 'python' && 
+               {hasMounted && pyodideManager.pyodideError && language === 'python' &&
                 <p className="text-xs text-destructive mt-1">Python environment error!</p> }
+               {!hasMounted && <p className="text-xs text-muted-foreground mt-1">Loading workspace...</p>}
             </CustomSidebarHeader>
           )}
           <ScrollArea className="flex-grow">
@@ -358,6 +364,18 @@ export default function CodeWriteMobilePage() {
                 </SidebarGroupContent>
               </SidebarGroup>
 
+              {/* Debugging & Testing */}
+              <SidebarGroup>
+                  <SidebarGroupLabel className="flex items-center">
+                      <Bug className="w-4 h-4 mr-2" /> Debugging & Testing
+                  </SidebarGroupLabel>
+                  <SidebarGroupContent className="space-y-2 p-1">
+                      <DebuggingPanel />
+                       <FirebaseTestLabPanel />
+                  </SidebarGroupContent>
+              </SidebarGroup>
+
+
               {/* Mobile Specific Features */}
               <SidebarGroup>
                   <SidebarGroupLabel className="flex items-center">
@@ -370,28 +388,32 @@ export default function CodeWriteMobilePage() {
                       <p className="text-xs text-muted-foreground px-1">Requires local SDK setup (Android Studio / Xcode).</p>
                   </SidebarGroupContent>
               </SidebarGroup>
-              <SidebarGroup>
+
+               {/* Firebase Features */}
+               <SidebarGroup>
                   <SidebarGroupLabel className="flex items-center">
-                      <Send className="w-4 h-4 mr-2" /> Push Notifications (FCM)
+                      <CloudCog className="w-4 h-4 mr-2" /> Firebase Services
                   </SidebarGroupLabel>
                   <SidebarGroupContent>
-                      <PushNotificationsPanel />
-                  </SidebarGroupContent>
-              </SidebarGroup>
-              <SidebarGroup>
-                  <SidebarGroupLabel className="flex items-center">
-                      <WifiOff className="w-4 h-4 mr-2" /> Offline Sync
-                  </SidebarGroupLabel>
-                  <SidebarGroupContent className="space-y-2 p-1">
-                      <div className="flex items-center justify-between space-x-2 px-1">
-                          <Label htmlFor="offline-sync-switch" className="text-sm">Enable Offline Persistence</Label>
-                          <Switch id="offline-sync-switch" disabled checked={false} />
-                      </div>
-                       <p className="text-xs text-muted-foreground px-1">
-                          Handled via Firebase SDK (Firestore/Realtime DB). Enable in your project settings and code.
-                       </p>
-                  </SidebarGroupContent>
-              </SidebarGroup>
+                     {/* Push Notifications */}
+                     <Label className="flex items-center text-sm font-medium mt-2 mb-1">
+                         <Send className="w-4 h-4 mr-2" /> Push Notifications (FCM)
+                     </Label>
+                     <PushNotificationsPanel />
+
+                     {/* Offline Sync */}
+                     <Label className="flex items-center text-sm font-medium mt-4 mb-1">
+                         <WifiOff className="w-4 h-4 mr-2" /> Offline Sync
+                     </Label>
+                     <div className="flex items-center justify-between space-x-2 px-1 pt-1">
+                         <Label htmlFor="offline-sync-switch" className="text-sm">Enable Offline Persistence</Label>
+                         <Switch id="offline-sync-switch" disabled checked={false} />
+                     </div>
+                      <p className="text-xs text-muted-foreground px-1 pt-1">
+                         Handled via Firebase SDK (Firestore/Realtime DB). Enable in your project settings and code.
+                      </p>
+                   </SidebarGroupContent>
+               </SidebarGroup>
 
 
             </CustomSidebarContent>
@@ -441,9 +463,9 @@ export default function CodeWriteMobilePage() {
               </Button>
             </div>
           </header>
-          
+
           <div className="flex flex-col flex-1 overflow-hidden">
-            <div 
+            <div
               className={cn(
                 "overflow-auto",
                 showOutputPanel ? "flex-[3_3_0%]" : "flex-1",
@@ -485,13 +507,14 @@ export default function CodeWriteMobilePage() {
                       />
                     </TabsContent>
                   </Tabs>
-                ) : ( 
+                ) : (
                   <CodeOutputPanel
                     srcDoc={iframeSrcDoc}
-                    textOutput={pythonRunOutput} 
+                    textOutput={pythonRunOutput}
                     onClose={() => setShowOutputPanel(false)}
                     className="h-full"
                     language={language}
+                    showQrCodeToggle={!!iframeSrcDoc} // Only show toggle if there's web content
                   />
                 )}
               </div>
