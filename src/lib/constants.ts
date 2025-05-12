@@ -10,6 +10,7 @@ export const SUPPORTED_LANGUAGES = [
   { value: 'typescript', label: 'TypeScript' },
   { value: 'html', label: 'HTML' },
   { value: 'css', label: 'CSS' },
+  { value: 'cpp', label: 'C++ (Preview)' },
   { value: 'plaintext', label: 'Plain Text' },
 ];
 
@@ -24,3 +25,4 @@ export const INDENTATION_OPTIONS = [
   { value: 2, label: '2 Spaces' },
   { value: 4, label: '4 Spaces' },
 ];
+
