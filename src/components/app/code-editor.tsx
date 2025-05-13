@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ChangeEvent } from 'react';
@@ -75,13 +76,19 @@ export function CodeEditor({
       setIsSuggesting(false);
     }
   }, [toast]);
-  
+
   const debouncedAutocomplete = useCallback(debounce(handleAutocomplete, 1500), [handleAutocomplete]);
 
   useEffect(() => {
     if (code.length > 10) { // Trigger autocomplete if code is somewhat substantial
        debouncedAutocomplete(code, language);
     }
+     // Cleanup function to clear timeout if component unmounts or dependencies change
+    return () => {
+       // This part requires access to the timeout variable inside debounce,
+       // which isn't directly exposed. A more complex debounce implementation
+       // might return a cancel function. For now, this is a limitation.
+    };
   }, [code, language, debouncedAutocomplete]);
 
 
@@ -94,42 +101,52 @@ export function CodeEditor({
 
   const handleTextareaChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     onCodeChange(event.target.value);
+    // Clear suggestion when user types
+    setSuggestion(null);
+     // Also cancel any pending debounced call
+     // See comment in useEffect about debounce cancellation limitation
   };
 
   return (
-    <div className="flex flex-col h-full">
+    // Removed outer div, Textarea now fills the parent (EditorArea's content div)
+    <>
       <Textarea
         value={code}
         onChange={handleTextareaChange}
         placeholder={`Start typing ${language} code...`}
         className={cn(
-          "flex-grow w-full p-4 rounded-md resize-none font-mono focus:outline-none focus:ring-2 focus:ring-ring",
-          "bg-primary text-primary-foreground border-border",
+          "flex-grow w-full h-full p-4 rounded-none resize-none font-mono focus:outline-none border-0", // Removed border, rounded-md, focus ring (handled by parent?)
+          "bg-primary text-primary-foreground", // Ensure background/text color
           editorTheme === 'light' ? 'bg-gray-100 text-gray-900' : '' // Simple theme toggle
         )}
         style={{ fontSize: `${fontSize}px`, lineHeight: `${fontSize * 1.5}px` }}
         spellCheck="false"
         aria-label="Code Editor"
       />
-      {(isSuggesting || suggestion) && (
-        <div className="p-2 mt-2 border rounded-md bg-secondary border-border">
-          {isSuggesting && (
-            <div className="flex items-center text-sm text-muted-foreground">
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              <span>Generating suggestion...</span>
-            </div>
-          )}
-          {suggestion && !isSuggesting && (
-            <div>
-              <p className="text-sm text-muted-foreground">AI Suggestion:</p>
-              <pre className="p-2 my-1 overflow-x-auto text-sm rounded-sm bg-primary text-accent max-h-32">{suggestion}</pre>
-              <Button onClick={applySuggestion} size="sm" variant="outline">
-                <Wand2 className="w-4 h-4 mr-2" /> Apply Suggestion
-              </Button>
-            </div>
-          )}
-        </div>
+       {(isSuggesting || suggestion) && (
+         <div className="absolute bottom-2 left-2 z-10 w-11/12 max-w-md"> {/* Position suggestion overlay */}
+           <div className="p-2 border rounded-md bg-secondary border-border shadow-lg">
+            {isSuggesting && (
+              <div className="flex items-center text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <span>Generating suggestion...</span>
+              </div>
+            )}
+            {suggestion && !isSuggesting && (
+              <div>
+                <p className="text-sm text-muted-foreground">AI Suggestion (Tab to accept):</p>
+                {/* Display only first line initially? Or limit height */}
+                <pre className="p-2 my-1 overflow-x-auto text-sm rounded-sm bg-primary text-accent max-h-20">{suggestion}</pre>
+                <Button onClick={applySuggestion} size="sm" variant="outline">
+                  <Wand2 className="w-4 h-4 mr-2" /> Apply Suggestion
+                </Button>
+              </div>
+            )}
+           </div>
+         </div>
       )}
-    </div>
+    </>
   );
 }
+
+    

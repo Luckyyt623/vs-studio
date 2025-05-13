@@ -1,3 +1,4 @@
+
 // src/components/app/python-terminal.tsx
 "use client";
 
@@ -41,26 +42,32 @@ export function PythonTerminal({
         viewport.scrollTop = viewport.scrollHeight;
       }
     }
-  }, [history]);
+     // Focus input when terminal becomes active and ready
+     if (!isDisabled && !isLoading && inputRef.current) {
+       // Timeout helps ensure focus happens after potential layout shifts
+       setTimeout(() => inputRef.current?.focus(), 0);
+     }
+  }, [history, isDisabled, isLoading]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!inputValue.trim() || isLoading || isDisabled) return;
-    
+
     const command = inputValue.trim();
     setInputValue('');
     await onCommand(command); // Parent updates history
   };
 
   return (
-    <div className={cn("flex flex-col h-full bg-primary text-primary-foreground p-2", className)}>
-      <div className="flex items-center p-2 mb-2 border-b bg-secondary border-border">
+    <div className={cn("flex flex-col h-full bg-primary text-primary-foreground", className)}> {/* Removed p-2 */}
+       {/* Header removed - handled by BottomPanel tabs */}
+      {/* <div className="flex items-center p-2 mb-2 border-b bg-secondary border-border">
         <Terminal className="w-5 h-5 mr-2" />
         <h3 className="text-sm font-semibold">Python Package Manager</h3>
-      </div>
+      </div> */}
 
-      <ScrollArea className="flex-grow mb-2 text-xs font-mono" ref={scrollAreaRef}>
-        <div className="p-2 space-y-1">
+      <ScrollArea className="flex-grow mb-2 text-xs font-mono px-2" ref={scrollAreaRef}> {/* Added px-2 here */}
+        <div className="space-y-1"> {/* Removed p-2 */}
           {history.map((item) => (
             <div key={item.id} className={cn(
               "whitespace-pre-wrap break-words",
@@ -78,26 +85,31 @@ export function PythonTerminal({
             </div>
           )}
           {isDisabled && !isLoading && (
-             <div className="text-muted-foreground italic">Terminal is disabled (Pyodide loading or error).</div>
+             <div className="text-muted-foreground italic">Terminal is disabled (Python environment loading or error).</div>
           )}
         </div>
+         {/* Add extra space at the bottom for input visibility */}
+        <div className="h-4"></div>
       </ScrollArea>
 
-      <form onSubmit={handleSubmit} className="flex items-center space-x-2">
+      <form onSubmit={handleSubmit} className="flex items-center space-x-2 p-2 border-t border-border"> {/* Added p-2 here */}
         <Input
           ref={inputRef}
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          placeholder={isDisabled ? "Pyodide loading..." : "e.g., pip install numpy"}
-          className="flex-grow h-9 bg-background text-foreground placeholder:text-muted-foreground"
+          placeholder={isDisabled ? "Python environment loading..." : "Type command and press Enter (e.g., pip install numpy)"}
+          className="flex-grow h-8 bg-input text-foreground placeholder:text-muted-foreground text-sm font-mono" // Use input background
           disabled={isLoading || isDisabled}
           aria-label="Python terminal input"
         />
-        <Button type="submit" size="sm" variant="outline" disabled={isLoading || isDisabled}>
-          <Send className="w-4 h-4 mr-0 md:mr-2" /> <span className="hidden md:inline">Send</span>
+        <Button type="submit" size="sm" variant="outline" disabled={isLoading || isDisabled} className="h-8">
+          <Send className="w-4 h-4" />
+           <span className="sr-only">Send Command</span>
         </Button>
       </form>
     </div>
   );
 }
+
+    

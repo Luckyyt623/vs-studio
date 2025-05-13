@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { FC } from 'react';
@@ -107,7 +108,7 @@ export const AiToolsPanel: FC<AiToolsPanelProps> = ({ currentCode, currentLangua
       setIsGeneratingTests(false);
     }
   };
-  
+
   const handleCopyToClipboard = async () => {
     if (resultDialogContent) {
       await navigator.clipboard.writeText(resultDialogContent);
@@ -118,7 +119,7 @@ export const AiToolsPanel: FC<AiToolsPanelProps> = ({ currentCode, currentLangua
   };
 
   return (
-    <div className="space-y-6 p-1">
+    <div className="space-y-6 p-4"> {/* Add padding back here */}
       <div className="space-y-2">
         <Label htmlFor="code-gen-desc" className="flex items-center text-sm font-medium">
           <WandSparkles className="w-4 h-4 mr-2" /> AI Code Generation
@@ -177,7 +178,8 @@ export const AiToolsPanel: FC<AiToolsPanelProps> = ({ currentCode, currentLangua
             </DialogHeader>
             <div className="relative my-4">
               <ScrollArea className="max-h-[60vh] border rounded-md border-border">
-                <pre className="p-4 text-sm bg-primary text-primary-foreground whitespace-pre-wrap break-all">{resultDialogContent}</pre>
+                {/* Use a specific class for code display */}
+                 <pre className="p-4 text-sm bg-primary text-primary-foreground whitespace-pre-wrap break-all font-mono">{resultDialogContent}</pre>
               </ScrollArea>
               <Button
                   variant="ghost"
@@ -190,8 +192,8 @@ export const AiToolsPanel: FC<AiToolsPanelProps> = ({ currentCode, currentLangua
               </Button>
             </div>
             <DialogFooter className="sm:justify-between">
-                <Button 
-                    type="button" 
+                <Button
+                    type="button"
                     variant="outline"
                     onClick={() => {
                     if(resultDialogContentType) {
@@ -215,3 +217,5 @@ export const AiToolsPanel: FC<AiToolsPanelProps> = ({ currentCode, currentLangua
     </div>
   );
 };
+
+    

@@ -3,13 +3,12 @@
 
 import type { FC } from 'react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Play, Loader2, Upload, ChevronRight } from 'lucide-react';
+import { Play, Loader2, ChevronRight, Menu } from 'lucide-react'; // Keep Run, Loader, add Menu
 import Image from 'next/image'; // Use next/image for optimized logo
 
 interface TopBarProps {
   projectName: string;
-  fileName: string;
+  fileName: string; // Keep filename for context maybe?
   onRunCode: () => void;
   isRunDisabled?: boolean;
   isLoading?: boolean;
@@ -17,64 +16,62 @@ interface TopBarProps {
 
 export const TopBar: FC<TopBarProps> = ({
   projectName,
-  fileName,
+  fileName, // Keep for now
   onRunCode,
   isRunDisabled = false,
   isLoading = false,
 }) => {
   return (
-    <header className="flex items-center justify-between px-3 py-1 border-b bg-secondary border-border h-12 shrink-0">
-      {/* Left Side: Logo, Breadcrumbs */}
+    <header className="flex items-center justify-between px-2 py-1 border-b bg-secondary border-border h-10 shrink-0">
+      {/* Left Side: Logo, Menu, Breadcrumbs */}
       <div className="flex items-center space-x-2">
-         {/* Firebase Logo - Replace with actual logo if available */}
-         <Image src="/firebase-logo.svg" alt="Firebase Logo" width={24} height={24} data-ai-hint="firebase logo" />
-         <span className="text-sm font-semibold text-foreground">Firebase Studio</span>
-         <ChevronRight className="w-4 h-4 text-muted-foreground" />
+         {/* Optional: Hamburger Menu */}
+         {/* <Button variant="ghost" size="icon" className="w-8 h-8">
+            <Menu className="w-4 h-4"/>
+         </Button> */}
+
+         {/* Logo (smaller) */}
+         <Image src="/firebase-logo.svg" alt="Firebase Logo" width={20} height={20} data-ai-hint="firebase logo" />
+         {/* Simplified Title/Breadcrumb */}
+         <span className="text-sm font-medium text-foreground hidden md:inline">Firebase Studio</span>
+         <ChevronRight className="w-4 h-4 text-muted-foreground hidden md:inline" />
          <span className="text-sm text-foreground">{projectName}</span>
+          {/* Display filename more subtly or in EditorArea only? Hide here for now */}
          {/* <ChevronRight className="w-4 h-4 text-muted-foreground" />
          <span className="text-sm text-muted-foreground">{fileName}</span> */}
+
+         {/* Mobile Filename */}
+         <div className="md:hidden text-sm font-medium truncate ml-2">
+           {fileName}
+         </div>
       </div>
 
-      {/* Right Side: Actions, User */}
-      <div className="flex items-center space-x-3">
+
+      {/* Center Area (Placeholder for global search like VSCode?) */}
+       {/* <div className="flex-1 max-w-xs mx-4">
+          <Input placeholder="Search..." className="h-7 text-xs"/>
+       </div> */}
+
+      {/* Right Side: Actions (Run Button Only for now) */}
+      <div className="flex items-center space-x-2">
+        {/* Run Button - kept minimal */}
         <Button
           onClick={onRunCode}
-          size="sm"
-          variant="outline"
-          className="hidden md:flex items-center"
+          size="sm" // Make it smaller
+          variant="ghost" // Make it less prominent
+          className="flex items-center h-8 px-2" // Adjust padding/height
           disabled={isRunDisabled || isLoading}
+          title="Run Code (Ctrl+Enter)"
         >
           {isLoading ? (
-             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
-            <Play className="w-4 h-4 mr-2" />
+            <Play className="w-4 h-4" />
           )}
-          Run
-        </Button>
-         <Button
-          onClick={onRunCode}
-          size="icon"
-          variant="ghost"
-          className="md:hidden"
-          disabled={isRunDisabled || isLoading}
-          title="Run Code"
-        >
-          {isLoading ? (
-             <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <Play className="w-5 h-5" />
-          )}
-          <span className="sr-only">Run Code</span>
+           <span className="sr-only md:not-sr-only md:ml-1">Run</span>
         </Button>
 
-        <Button size="sm" variant="default" className="bg-purple-600 hover:bg-purple-700 text-white px-4">
-           <Upload className="w-4 h-4 mr-2" />
-           Publish
-        </Button>
-        <Avatar className="h-8 w-8">
-          <AvatarImage src="https://picsum.photos/id/237/32/32" alt="User Avatar" data-ai-hint="user avatar" />
-          <AvatarFallback>L</AvatarFallback>
-        </Avatar>
+         {/* Removed Publish Button and Avatar */}
       </div>
     </header>
   );

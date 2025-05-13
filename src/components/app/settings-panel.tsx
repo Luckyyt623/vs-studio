@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Label } from '@/components/ui/label';
@@ -39,7 +40,7 @@ export function SettingsPanel({
   onIndentationChange,
 }: SettingsPanelProps) {
   return (
-    <div className="space-y-6 p-1">
+    <div className="space-y-6"> {/* Remove p-1 */}
       <div>
         <Label htmlFor="language-select" className="flex items-center mb-2 text-sm font-medium">
           <Languages className="w-4 h-4 mr-2" /> Language
@@ -72,7 +73,7 @@ export function SettingsPanel({
           className="w-full"
         />
       </div>
-      
+
       <div>
         <Label htmlFor="indentation-select" className="flex items-center mb-2 text-sm font-medium">
           <Pilcrow className="w-4 h-4 mr-2" /> Indentation
@@ -105,3 +106,5 @@ export function SettingsPanel({
     </div>
   );
 }
+
+    

@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { XCircle, QrCode, Smartphone, RefreshCw, ArrowLeft, ArrowRight, Home } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { XCircle, QrCode, Smartphone, RefreshCw, ArrowLeft, ArrowRight, Home, Eraser } from "lucide-react";
 import { QRCodeSVG } from 'qrcode.react';
 import { cn } from "@/lib/utils";
 import {
@@ -16,36 +16,43 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { PanelTab } from '@/lib/enums'; // Updated import
 
 
 interface CodeOutputPanelProps {
   srcDoc?: string; // For web preview iframe
-  textOutput?: { stdout?: string; stderr?: string; error?: string }; // For console/terminal output
+  textOutput?: { stdout?: string; stderr?: string; error?: string } | null; // Allow null
   language?: string;
   onClose: () => void;
+  onClear?: () => void; // Optional clear handler for Console/Output
   className?: string;
   showQrCodeToggle?: boolean; // Prop to control QR code button visibility in web preview
   isConsole?: boolean; // Differentiates between web preview and console output display
+  activeTab: PanelTab; // Add activeTab to control conditional rendering
 }
 
 export function CodeOutputPanel({
     srcDoc,
     textOutput,
     language,
-    onClose,
+    onClose, // onClose is handled by the parent BottomPanel/RightPanel now
+    onClear,
     className,
     showQrCodeToggle = false,
-    isConsole = false
+    isConsole = false,
+    activeTab,
 }: CodeOutputPanelProps) {
   const [showQrDialog, setShowQrDialog] = useState(false);
   const [qrDataUri, setQrDataUri] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState('/'); // Simulated URL for preview
+  const iframeRef = useRef<HTMLIFrameElement>(null); // Ref for iframe
 
   const hasTextOutput = textOutput && (textOutput.stdout || textOutput.stderr || textOutput.error);
 
   const generateDataUri = (htmlContent: string): string => {
     if (htmlContent.length > 2000) {
       console.warn("HTML content might be too large for a reliable Data URI QR Code.");
+      // Consider alternative methods for large previews (e.g., blob URL)
     }
     return `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
   }
@@ -58,27 +65,35 @@ export function CodeOutputPanel({
     }
   };
 
-  // Simulate iframe reload - doesn't actually reload content from server, just resets srcDoc if possible
   const handleRefresh = () => {
-      const iframe = document.getElementById('code-preview-iframe') as HTMLIFrameElement | null;
-      if (iframe && srcDoc) {
+      if (iframeRef.current && srcDoc) {
           // Re-setting srcdoc forces a reload of the content
-          iframe.srcdoc = srcDoc;
+          iframeRef.current.srcdoc = srcDoc;
       }
   }
 
+  // Effect to update iframe when srcDoc changes
+  useEffect(() => {
+    if (iframeRef.current && srcDoc !== iframeRef.current.srcdoc) {
+      iframeRef.current.srcdoc = srcDoc;
+    }
+  }, [srcDoc]);
+
+  const panelTitle = isConsole ? "Debug Console" : "Output";
+
   return (
     <div className={cn("flex flex-col h-full bg-primary text-primary-foreground", className)}>
+
       {/* Header specific to Web Preview */}
-      {!isConsole && (
+      {activeTab === PanelTab.WebPreview && ( 
         <div className="flex items-center space-x-1 p-1 bg-secondary border-b border-border h-10 shrink-0">
           <Button variant="ghost" size="icon" className="w-7 h-7" disabled><ArrowLeft className="w-4 h-4" /></Button>
           <Button variant="ghost" size="icon" className="w-7 h-7" disabled><ArrowRight className="w-4 h-4" /></Button>
-          <Button variant="ghost" size="icon" className="w-7 h-7" onClick={handleRefresh}><RefreshCw className="w-4 h-4" /></Button>
+          <Button variant="ghost" size="icon" className="w-7 h-7" onClick={handleRefresh} title="Reload Preview"><RefreshCw className="w-4 h-4" /></Button>
           <Input
             type="text"
             readOnly
-            value={previewUrl}
+            value={previewUrl} // This is just a placeholder
             className="h-7 flex-1 bg-background text-xs rounded-sm px-2"
             aria-label="Preview URL"
           />
@@ -87,49 +102,70 @@ export function CodeOutputPanel({
                <QrCode className="w-4 h-4" />
              </Button>
           )}
+           {/* Close button is now handled by RightPanel */}
         </div>
       )}
 
+      {/* Header for Console/Output */}
+      {(isConsole || activeTab === PanelTab.Output) && (
+         <div className="flex items-center justify-between p-1 bg-secondary border-b border-border h-10 shrink-0">
+             <span className="text-xs font-medium px-2">{panelTitle}</span>
+             <div className="flex items-center">
+                {onClear && (
+                   <Button variant="ghost" size="icon" onClick={onClear} className="w-7 h-7" title={`Clear ${panelTitle}`}>
+                      <Eraser className="w-4 h-4" />
+                   </Button>
+                )}
+                {/* Close button is handled by BottomPanel */}
+             </div>
+         </div>
+      )}
+
+
       {/* Content Area */}
-      <div className="flex-grow overflow-auto">
+      <div className="flex-grow overflow-auto p-2"> {/* Added padding to content area */}
         {/* Web Preview iframe */}
-        {!isConsole && srcDoc && (
+        {activeTab === PanelTab.WebPreview && (
           <iframe
-            id="code-preview-iframe"
-            srcDoc={srcDoc}
+            ref={iframeRef}
+            // srcDoc={srcDoc} // Set via useEffect now
             title="Code Preview"
             sandbox="allow-scripts allow-same-origin allow-modals allow-forms allow-popups"
-            className="w-full h-full border-0"
+            className="w-full h-full border-0 bg-white" // Give iframe a background
             aria-label="Code execution preview"
           />
         )}
-        {!isConsole && !srcDoc && (
-            <div className="p-4 text-muted-foreground h-full flex items-center justify-center">
+         {activeTab === PanelTab.WebPreview && !srcDoc && (
+            <div className="text-muted-foreground h-full flex items-center justify-center text-sm">
                 Run HTML/JS/CSS code to see the web preview.
             </div>
         )}
 
-        {/* Console Output */}
-        {isConsole && hasTextOutput && (
-          <ScrollArea className="h-full p-2 font-mono text-xs">
-            {textOutput.stdout && (
-              <pre className="whitespace-pre-wrap text-primary-foreground">{textOutput.stdout}</pre>
-            )}
-            {textOutput.stderr && (
-              <pre className="whitespace-pre-wrap text-red-400">{textOutput.stderr}</pre>
-            )}
-            {textOutput.error && !textOutput.stderr?.includes(textOutput.error) && (
-              <pre className="whitespace-pre-wrap text-destructive">{`Execution Error: ${textOutput.error}`}</pre>
-            )}
-             {/* Spacer */}
-            <div className="h-4"></div>
+        {/* Console/Output Text */}
+        {(isConsole || activeTab === PanelTab.Output) && hasTextOutput && (
+          <ScrollArea className="h-full font-mono text-xs">
+              {/* Combine stdout and stderr for display */}
+              {textOutput?.stdout && (
+                <pre className="whitespace-pre-wrap text-primary-foreground">{textOutput.stdout}</pre>
+              )}
+              {textOutput?.stderr && (
+                <pre className="whitespace-pre-wrap text-red-400">{textOutput.stderr}</pre>
+              )}
+              {/* Display error separately only if it's distinct from stderr */}
+              {textOutput?.error && (!textOutput.stderr || !textOutput.stderr.includes(textOutput.error)) && (
+                 <pre className="whitespace-pre-wrap text-destructive">{`Execution Error: ${textOutput.error}`}</pre>
+              )}
+              {/* Spacer */}
+              <div className="h-4"></div>
           </ScrollArea>
         )}
-        {isConsole && !hasTextOutput && (
-           <div className="p-4 text-muted-foreground h-full flex items-center justify-center">
-            {language === 'python' ? 'Run Python code to see output.' :
-             language === 'cpp' ? 'C++ execution output will appear here (if supported).' :
-             'Console output (e.g., from console.log) will appear here.'}
+         {(isConsole || activeTab === PanelTab.Output) && !hasTextOutput && (
+           <div className="text-muted-foreground h-full flex items-center justify-center text-sm">
+                {language === 'python' ? `Run Python code to see output in ${panelTitle}.` :
+                 language === 'cpp' ? `C++ output will appear here (if supported).` :
+                 isConsole ? 'Debug output (e.g., from console.log) will appear here.' :
+                 'Program output will appear here.'
+                }
           </div>
         )}
       </div>
@@ -163,5 +199,3 @@ export function CodeOutputPanel({
     </div>
   );
 }
-
-    

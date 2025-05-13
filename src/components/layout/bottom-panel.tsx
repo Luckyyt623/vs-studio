@@ -4,16 +4,10 @@
 import type { FC, ReactNode } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
-import { X, TerminalSquare, List } from 'lucide-react'; // Icons for tabs and close
+import { X, Terminal, Bug, Server, AlertCircle } from 'lucide-react'; // Updated Icons
+import type { PanelTab } from '@/lib/enums'; // Import the enum
 import { cn } from '@/lib/utils';
-
-// Match enum in page.tsx
-enum PanelTab {
-  WebPreview,
-  Gemini,
-  Console,
-  Terminal,
-}
+import { Badge } from '@/components/ui/badge';
 
 interface BottomPanelProps {
   children: ReactNode; // The active tab content
@@ -22,6 +16,7 @@ interface BottomPanelProps {
   onClose: () => void;
   className?: string;
   style?: React.CSSProperties;
+  problemsCount?: number; // Optional count for problems badge
 }
 
 export const BottomPanel: FC<BottomPanelProps> = ({
@@ -31,10 +26,13 @@ export const BottomPanel: FC<BottomPanelProps> = ({
   onClose,
   className,
   style,
+  problemsCount = 0,
 }) => {
   const getTabValue = (tab: PanelTab): string => {
     switch (tab) {
-      case PanelTab.Console: return 'console';
+      case PanelTab.Problems: return 'problems';
+      case PanelTab.Output: return 'output';
+      case PanelTab.DebugConsole: return 'debug_console';
       case PanelTab.Terminal: return 'terminal';
       default: return ''; // Should not happen for bottom panel
     }
@@ -42,45 +40,77 @@ export const BottomPanel: FC<BottomPanelProps> = ({
 
    const handleValueChange = (value: string) => {
     switch (value) {
-      case 'console': onTabChange(PanelTab.Console); break;
+      case 'problems': onTabChange(PanelTab.Problems); break;
+      case 'output': onTabChange(PanelTab.Output); break;
+      case 'debug_console': onTabChange(PanelTab.DebugConsole); break;
       case 'terminal': onTabChange(PanelTab.Terminal); break;
     }
   };
 
   return (
     <div
-        className={cn("h-1/3 border-t bg-secondary border-border shrink-0 flex flex-col", className)}
+        className={cn(
+            "h-1/3 border-t bg-secondary border-border shrink-0 flex flex-col", // Use secondary for panel chrome
+            "min-h-[100px] md:min-h-[150px]", // Ensure minimum height
+            className
+        )}
         style={style} // Allow height override if needed
     >
-       <Tabs value={getTabValue(activeTab)} onValueChange={handleValueChange} className="flex flex-col flex-1 overflow-hidden">
-         <div className="flex items-center justify-between border-b border-border pr-1">
-           <TabsList className="shrink-0 rounded-none border-0 bg-transparent justify-start px-1 py-0 h-10">
-             <TabsTrigger value="console" className="text-xs px-3 py-1.5 h-9 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-none border-b-2 border-transparent data-[state=active]:border-accent">
-               <List className="w-4 h-4 mr-1.5" /> Console
+       {/* Tabs container */}
+       <Tabs
+         value={getTabValue(activeTab)}
+         onValueChange={handleValueChange}
+         className="flex flex-col flex-1 overflow-hidden"
+        >
+         {/* Tab List Header */}
+         <div className="flex items-center justify-between border-b border-border pr-1 h-10 shrink-0">
+           <TabsList className="shrink-0 rounded-none border-0 bg-transparent justify-start px-1 py-0 h-full">
+             <TabsTrigger
+                value="problems"
+                className="text-xs uppercase tracking-wider px-3 py-1.5 h-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-none border-b-2 border-transparent data-[state=active]:border-accent hover:text-foreground text-muted-foreground"
+             >
+               <AlertCircle className="w-4 h-4 mr-1.5" /> Problems
+               {problemsCount > 0 && (
+                 <Badge variant="secondary" className="ml-2 px-1.5 py-0.5 text-xs h-4">
+                   {problemsCount}
+                 </Badge>
+               )}
              </TabsTrigger>
-             <TabsTrigger value="terminal" className="text-xs px-3 py-1.5 h-9 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-none border-b-2 border-transparent data-[state=active]:border-accent">
-               <TerminalSquare className="w-4 h-4 mr-1.5" /> Terminal
+              <TabsTrigger
+                value="output"
+                className="text-xs uppercase tracking-wider px-3 py-1.5 h-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-none border-b-2 border-transparent data-[state=active]:border-accent hover:text-foreground text-muted-foreground"
+             >
+               <Server className="w-4 h-4 mr-1.5" /> Output
              </TabsTrigger>
-             {/* Add more tabs like Problems, Output here */}
+             <TabsTrigger
+                value="debug_console"
+                className="text-xs uppercase tracking-wider px-3 py-1.5 h-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-none border-b-2 border-transparent data-[state=active]:border-accent hover:text-foreground text-muted-foreground"
+             >
+               <Bug className="w-4 h-4 mr-1.5" /> Debug Console
+             </TabsTrigger>
+             <TabsTrigger
+                value="terminal"
+                className="text-xs uppercase tracking-wider px-3 py-1.5 h-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-none border-b-2 border-transparent data-[state=active]:border-accent hover:text-foreground text-muted-foreground"
+             >
+               <Terminal className="w-4 h-4 mr-1.5" /> Terminal
+             </TabsTrigger>
            </TabsList>
-           <Button variant="ghost" size="icon" onClick={onClose} className="w-8 h-8 text-muted-foreground hover:bg-muted">
-             <X className="w-4 h-4" />
-             <span className="sr-only">Close Panel</span>
-           </Button>
+           {/* Panel Actions (e.g., Close) */}
+           <div className="flex items-center space-x-1">
+               {/* Add other actions like split panel here later */}
+               <Button variant="ghost" size="icon" onClick={onClose} className="w-8 h-8 text-muted-foreground hover:bg-muted">
+                 <X className="w-4 h-4" />
+                 <span className="sr-only">Close Panel</span>
+               </Button>
+            </div>
          </div>
 
-         {/* Render children directly based on parent's state */}
-         <div className="flex-grow overflow-auto bg-primary">
-           {children}
-         </div>
-
-         {/* Example using TabsContent if needed */}
-         {/* <TabsContent value="console" className="flex-grow overflow-auto m-0 p-0 data-[state=inactive]:hidden">
-             {activeTab === PanelTab.Console ? children : null}
-         </TabsContent>
-         <TabsContent value="terminal" className="flex-grow overflow-auto m-0 p-0 data-[state=inactive]:hidden">
-             {activeTab === PanelTab.Terminal ? children : null}
-         </TabsContent> */}
+         {/* Tab Content Area */}
+         {/* We render children directly passed from the parent, which handles the logic */}
+         {/* The background should be primary as it's the content area */}
+         <div className="flex-grow overflow-auto bg-primary p-0">
+              {children}
+          </div>
        </Tabs>
     </div>
   );
