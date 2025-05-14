@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { FC } from 'react';
+import { useState, useEffect, type FC } from 'react';
 import { GitBranch, CloudOff, Cloud, AlertCircle, Bell, CheckCircle, XCircle, Loader2, Wifi, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -30,9 +30,9 @@ export const StatusBar: FC<StatusBarProps> = ({
   const indentation = 'Spaces: 2'; // Example
   const encoding = 'UTF-8'; // Example
   const lineEndings = 'LF'; // Example
-   const [isOnline, setIsOnline] = React.useState(true); // Default to true
+   const [isOnline, setIsOnline] = useState(true); // Default to true
 
-   React.useEffect(() => {
+   useEffect(() => {
        if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
            setIsOnline(navigator.onLine);
 

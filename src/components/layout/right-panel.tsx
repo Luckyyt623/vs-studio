@@ -5,7 +5,7 @@ import type { FC, ReactNode } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
 import { X, Smartphone, Bot } from 'lucide-react'; // Icons for tabs and close
-import type { PanelTab } from '@/lib/enums'; // Import the enum
+import { PanelTab } from '@/lib/enums'; // Import the enum
 import { cn } from '@/lib/utils';
 
 
